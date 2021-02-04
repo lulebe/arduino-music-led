@@ -4,6 +4,11 @@
 // Our Global Sample Rate, 5000hz
 #define SAMPLEPERIODUS 200
 
+#define INPUT_PIN 0
+#define LED_RED 9
+#define LED_GREEN 10
+#define LED_BLUE 11
+
 // defines for setting and clearing register bits
 #ifndef cbi
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
@@ -91,13 +96,13 @@ void loop() {
           else
             currentBrightness = max(0.1f, currentBrightness*0.998f);
         }
-        analogWrite(9, 255 * red * currentBrightness);
-        analogWrite(10, 255 * green * currentBrightness);
-        analogWrite(11, 255 * blue * currentBrightness);
+        analogWrite(LED_RED, 255 * red * currentBrightness);
+        analogWrite(LED_GREEN, 255 * green * currentBrightness);
+        analogWrite(LED_BLUE, 255 * blue * currentBrightness);
         
         
         // Read ADC and center so +-512
-        sample = (float)analogRead(0)-512.f;
+        sample = (float)analogRead(INPUT_PIN)-512.f;
 
         // Filter band passes
         valueLow = bassFilter(sample);
