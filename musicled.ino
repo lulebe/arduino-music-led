@@ -8,6 +8,7 @@
 #define LED_RED 9
 #define LED_GREEN 10
 #define LED_BLUE 11
+#define BUTTON 4
 
 // defines for setting and clearing register bits
 #ifndef cbi
@@ -17,6 +18,14 @@
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
 
+float currentBrightness = 0.0f;
+float currentColor = 0.0f;
+float colorCycle = 0.0f;
+float red, green, blue;
+long lastDetection = 0;
+long currentDetection = 0;
+
+
 void setup() {
     // Set ADC to 77khz, max for 10bit
     sbi(ADCSRA,ADPS2);
@@ -24,11 +33,13 @@ void setup() {
     cbi(ADCSRA,ADPS0);
 
     //The pin with the LED
-    pinMode(9, OUTPUT);
-    pinMode(10, OUTPUT);
-    pinMode(11, OUTPUT);
-    digitalWrite(10, LOW);
-    digitalWrite(11, LOW);
+    pinMode(LED_RED, OUTPUT);
+    pinMode(LED_GREEN, OUTPUT);
+    pinMode(LED_BLUE, OUTPUT);
+    pinMode(BUTTON, INPUT_PULLUP);
+    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_BLUE, LOW);
 }
 
 // 20 - 200hz band pass
@@ -82,13 +93,6 @@ void loop() {
     threshLow = 0.02f * 600;
     threshMid = 0.02f * 10;
 
-    float currentBrightness = 0.0f;
-    float currentColor = 0.0f;
-    float colorCycle = 0.0f;
-    float red, green, blue;
-    long lastDetection = 0;
-    long currentDetection = 0;
-
     for(i = 0;;++i){
         if (millis() - lastDetection > 60) {
           if (currentBrightness > 0.45)
@@ -99,6 +103,15 @@ void loop() {
         analogWrite(LED_RED, 255 * red * currentBrightness);
         analogWrite(LED_GREEN, 255 * green * currentBrightness);
         analogWrite(LED_BLUE, 255 * blue * currentBrightness);
+
+        if (digitalRead(BUTTON) == LOW) {
+          delay(10);
+          while(true) {
+            if (digitalRead(BUTTON) == HIGH) break;
+          }
+          delay(300);
+          nonMusicLight();
+        }
         
         
         // Read ADC and center so +-512
@@ -128,7 +141,6 @@ void loop() {
                 if (beatMid > threshMid) colorCycle = colorCycle + 0.017137f;
                 if (colorCycle >= 100.0f) colorCycle = 0.0f;
                 currentColor = 3.0f * (colorCycle - floor(colorCycle));
-                red = 1.0f - currentColor;
                 if (currentColor < 1.0f) {
                   red = 1.0f - currentColor;
                   green = currentColor;
@@ -152,4 +164,47 @@ void loop() {
         // Consume excess clock cycles, to keep at 5000 hz
         for(unsigned long up = time+SAMPLEPERIODUS; time > 20 && time < up; time = micros());
     }  
+}
+
+void nonMusicLight () {
+  bool goingBrighter = false;
+  while(true) {
+    if (digitalRead(BUTTON) == LOW) {
+      delay(10);
+      while(true) {
+        if (digitalRead(BUTTON) == HIGH) break;
+      }
+      delay(300);
+      return;
+    }
+    if (goingBrighter) {
+      currentBrightness = min(0.5f, currentBrightness+0.0001f);
+      if (currentBrightness >= 0.5f) goingBrighter = false;
+    } else {
+      currentBrightness = max(0.2f, currentBrightness-0.0001f);
+      if (currentBrightness <= 0.2f) goingBrighter = true;
+    }
+    colorCycle = colorCycle + 0.000053f;
+    if (colorCycle >= 100.0f) colorCycle = 0.0f;
+    currentColor = 3.0f * (colorCycle - floor(colorCycle));
+    if (currentColor < 1.0f) {
+      red = 1.0f - currentColor;
+      green = currentColor;
+      blue = 0.0f;
+    }
+    else if (currentColor < 2.0f) {
+      red = 0.0f;
+      green = 2.0f - currentColor;
+      blue = currentColor - 1.0f;
+    }
+    else if (currentColor < 3.0f) {
+      red = currentColor - 2.0f;
+      green = 0.0f;
+      blue = 3.0f - currentColor;
+    }
+    analogWrite(LED_RED, 255 * red * currentBrightness);
+    analogWrite(LED_GREEN, 255 * green * currentBrightness);
+    analogWrite(LED_BLUE, 255 * blue * currentBrightness);
+    delayMicroseconds(500);
+  }
 }
