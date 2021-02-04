@@ -97,7 +97,7 @@ void loop() {
     threshMid = 0.02f * 10;
 
     for(i = 0;;++i){
-        if (millis() - lastDetection > 60) {
+        if (millis() - lastDetection > 60+(1-currentMaxBrightness)*400) {
           if (currentBrightness > 0.45)
             currentBrightness = currentBrightness * 0.997;
           else
