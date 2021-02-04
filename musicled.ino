@@ -19,6 +19,8 @@
 #endif
 
 float currentBrightness = 0.0f;
+float currentMaxBrightness = 1.0f;
+float newMaxBrightness = 1.0f;
 float currentColor = 0.0f;
 float colorCycle = 0.0f;
 float red, green, blue;
@@ -87,8 +89,9 @@ float beatFilter(float sample) {
 
 void loop() {
     unsigned long time = micros(); // Used to track rate
-    float sample, valueLow, valueMid, envelopeLow, envelopeMid, beatLow, beatMid, threshLow, threshMid;
+    float sample, valueLow, valueMid, envelopeLow, envelopeMid, beatLow, beatMid, threshLow, threshMid, runningMean;
     unsigned char i;
+    unsigned char runningMeanCount = 0;
     
     threshLow = 0.02f * 600;
     threshMid = 0.02f * 10;
@@ -116,6 +119,7 @@ void loop() {
         
         // Read ADC and center so +-512
         sample = (float)analogRead(INPUT_PIN)-512.f;
+        runningMean = runningMean + (abs(sample) - runningMean) / (i*runningMeanCount+1);
 
         // Filter band passes
         valueLow = bassFilter(sample);
@@ -133,12 +137,18 @@ void loop() {
                 beatLow = beatFilter(envelopeLow);
                 beatMid = beatFilter(envelopeMid);
 
+                if (currentMaxBrightness > newMaxBrightness) { //reduce brightness
+                  currentMaxBrightness = max(newMaxBrightness, currentMaxBrightness - 0.1f);
+                } else { //increase brightness
+                  currentMaxBrightness = min(newMaxBrightness, currentMaxBrightness + 0.1f);
+                }
+                
                 // If we are above threshold, light up LED
                 if(beatLow > threshLow) {
-                  currentBrightness = 1.0f;
+                  currentBrightness = currentMaxBrightness;
                   lastDetection = millis();
                 }
-                if (beatMid > threshMid) colorCycle = colorCycle + 0.017137f;
+                if (beatMid > threshMid) colorCycle = colorCycle + 0.027137f*currentMaxBrightness;
                 if (colorCycle >= 100.0f) colorCycle = 0.0f;
                 currentColor = 3.0f * (colorCycle - floor(colorCycle));
                 if (currentColor < 1.0f) {
@@ -159,6 +169,12 @@ void loop() {
 
                 //Reset sample counter
                 i = 0;
+                runningMeanCount++;
+                if (runningMeanCount > 12) {
+                  newMaxBrightness = min(1.0f, runningMean/150.0f);
+                  runningMeanCount = 0;
+                  runningMean = 0.0f;
+                }
         }
 
         // Consume excess clock cycles, to keep at 5000 hz
