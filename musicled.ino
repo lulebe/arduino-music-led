@@ -101,7 +101,7 @@ void loop() {
           if (currentBrightness > 0.45)
             currentBrightness = currentBrightness * 0.997;
           else
-            currentBrightness = max(0.1f, currentBrightness*0.998f);
+            currentBrightness = max(0.2f, currentBrightness*0.998f);
         }
         analogWrite(LED_RED, 255 * red * currentBrightness);
         analogWrite(LED_GREEN, 255 * green * currentBrightness);
