@@ -171,7 +171,7 @@ void loop() {
                 i = 0;
                 runningMeanCount++;
                 if (runningMeanCount > 12) {
-                  newMaxBrightness = min(1.0f, runningMean/150.0f);
+                  newMaxBrightness = max(0.5f, min(1.0f, runningMean/150.0f));
                   runningMeanCount = 0;
                   runningMean = 0.0f;
                 }
